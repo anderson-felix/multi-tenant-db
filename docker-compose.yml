@@ -1,0 +1,15 @@
+volumes:
+  esg_pg:
+
+services:
+  esg-db:
+    image: postgres:14.1
+    container_name: esg-db
+    ports:
+      - 1111:5432
+    volumes:
+      - esg_pg:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: esg-database
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres

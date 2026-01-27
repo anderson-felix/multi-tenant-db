@@ -1,0 +1,23 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "./prismaClient"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model LogSistema {
+  id           String   @id @default(uuid())
+  mensagem     String   @db.VarChar(150)
+  aplicacao    String   @db.VarChar(100)
+  detalhes     String?
+  loglevel     Int
+  ref_tabela   String?  @db.VarChar(100)
+  ref_registro String?  @db.VarChar(100)
+  metadata     Json?
+  data_criacao DateTime @default(now())
+
+  @@map("log_sistema")
+}

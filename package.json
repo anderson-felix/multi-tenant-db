@@ -1,0 +1,24 @@
+{
+  "name": "esg-backend",
+  "version": "0.0.1",
+  "description": "ESG main service",
+  "author": "anderson.felix@stage.consulting",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "clean:prisma": "rimraf prisma/prismaClient",
+    "localdb:start": "docker compose up -d",
+    "localdb:stop": "docker compose down",
+    "db:migrate": "npx prisma migrate dev --name",
+    "hard": "rimraf prisma/migrations && npm run join && npm run migrate",
+    "migrate": "npm run join && npx prisma migrate dev --schema=./prisma/schema.prisma --name auto && npm run clean:prisma",
+    "studio": "npx prisma studio --schema=./prisma/schema.prisma"
+  },
+  "dependencies": {
+    "@prisma/client": "^4.15.0",
+    "rimraf": "^5.0.1"
+  },
+  "devDependencies": {
+    "prisma": "^4.15.0"
+  }
+}
