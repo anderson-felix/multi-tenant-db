@@ -10,63 +10,55 @@ datasource db {
 
 model BackofficeUser {
   id              String   @id @default(uuid()) @db.Uuid
-  fullName        String?  @map("full_name") @db.VarChar(255)
+  fullName        String?  @db.VarChar(255)
   email           String?  @unique @db.VarChar(255)
-  externalIdpId   String?  @unique @map("external_idp_id") @db.VarChar(255) // ObjectId do Azure AD
+  externalIdpId   String?  @unique @db.VarChar(255) // ObjectId do Azure AD
   role            Int?     @db.SmallInt // 1: SuperAdmin, 2: Finance
   status          Int?     @db.SmallInt // 0: Inactive, 1: Active
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
-
-  @@map("backoffice_user")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
 }
 
 model InsurerTenant {
   id              String   @id @default(uuid()) @db.Uuid
   name            String?  @db.VarChar(255)
-  tradeName       String?  @map("trade_name") @db.VarChar(255)
-  federalDocument String?  @map("federal_document") @db.VarChar(20)
-  dbRef           String?  @unique @map("db_ref") @db.VarChar(50) // Nome da base de dados da cedente
+  tradeName       String?  @db.VarChar(255)
+  federalDocument String?  @db.VarChar(20)
+  dbRef           String?  @unique @db.VarChar(50) // Nome da base de dados da cedente
   status          Int?     @db.SmallInt // 0: Inactive, 1: Active
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
   
   products        Product[]
   tenantProducts  InsurerTenantProduct[]
-
-  @@map("insurer_tenant")
 }
 
 model Product {
   id              String   @id @default(uuid()) @db.Uuid
-  insurerTenantId String   @map("insurer_tenant_id") @db.Uuid
+  insurerTenantId String   @db.Uuid
   name            String   @db.VarChar(255)
-  productTypeId   Int?     @map("product_type_id") @db.SmallInt // 1: RCTR-C, 2: RC-DC, 3: Multimodal
-  pricingRuleId   String?  @map("pricing_rule_id") @db.Uuid
+  productTypeId   Int?     @db.SmallInt // 1: RCTR-C, 2: RC-DC, 3: Multimodal
+  pricingRuleId   String?  @db.Uuid
   status          Int?     @db.SmallInt // 0: Inactive, 1: Active
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
 
   // Relations
   insurerTenant   InsurerTenant @relation(fields: [insurerTenantId], references: [id])
   pricingRule     PricingRule?  @relation(fields: [pricingRuleId], references: [id])
   tenantProducts  InsurerTenantProduct[]
   productCoverages ProductCoverage[]
-
-  @@map("product")
 }
 
 model InsurerTenantProduct {
   id              String   @id @default(uuid()) @db.Uuid
-  insurerTenantId String   @map("insurer_tenant_id") @db.Uuid
-  productId       String?  @map("product_id") @db.Uuid
+  insurerTenantId String   @db.Uuid
+  productId       String?  @db.Uuid
   metadata        Json?    @db.JsonB // Informações adicionais {chave:valor}
 
   // Relations
   insurerTenant   InsurerTenant @relation(fields: [insurerTenantId], references: [id])
   product         Product?      @relation(fields: [productId], references: [id])
-
-  @@map("insurer_tenant_product")
 }
 
 model Coverage {
@@ -74,261 +66,29 @@ model Coverage {
   code            String?  @db.VarChar(20) // Ex: AP 01, RCF-DC
   name            String   @db.VarChar(255)
   description     String?  @db.Text
-  baseTax         Decimal? @map("base_tax") @db.Decimal(10, 6)
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
+  baseTax         Decimal? @db.Decimal(10, 6)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
 
   productCoverages ProductCoverage[]
-
-  @@map("coverage")
 }
 
 model ProductCoverage {
   id              String   @id @default(uuid()) @db.Uuid
-  productId       String?  @map("product_id") @db.Uuid
-  coverageId      String?  @map("coverage_id") @db.Uuid
+  productId       String?  @db.Uuid
+  coverageId      String?  @db.Uuid
   metadata        Json?    @db.JsonB // Informações adicionais {chave:valor}
 
   // Relations
   product         Product?  @relation(fields: [productId], references: [id])
   coverage        Coverage? @relation(fields: [coverageId], references: [id])
-
-  @@map("product_coverage")
 }
 
 model PricingRule {
   id              String   @id @default(uuid()) @db.Uuid
-  ruleJson        Json?    @map("rule_json") @db.JsonB // Regras de motor de cálculo
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
+  ruleJson        Json?    @db.JsonB // Regras de motor de cálculo
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
 
   products        Product[]
-
-  @@map("pricing_rule")
-}
-
-// This is your Prisma schema file for the Tenant Database
-
-generator client {
-  provider = "prisma-client-js"
-}
-
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
-model Company {
-  id               String   @id @default(uuid()) @db.Uuid
-  parentCompanyId  String?  @map("parent_company_id") @db.Uuid
-  name             String?  @db.VarChar(255)
-  document         String?  @db.VarChar(20)
-  /// Configs específicas desta Cedente
-  settings         Json?    @db.JsonB
-  /// 0: Inactive, 1: Active
-  status           Int?     @db.SmallInt
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @default(now()) @updatedAt @map("updated_at")
-
-  // Relations
-  parentCompany    Company?      @relation("CompanyToCompany", fields: [parentCompanyId], references: [id])
-  childCompanies   Company[]      @relation("CompanyToCompany")
-  userProfiles     UserProfile[]
-
-  @@map("company")
-}
-
-model UserProfile {
-  id                  String   @id @default(uuid()) @db.Uuid
-  companyId           String?  @map("company_id") @db.Uuid
-  userId              String?  @map("user_id") @db.Uuid
-  /// 1: Admin, 2: Seguradora, 3: Corretor, 4: Segurado
-  companyRole         Int?     @map("company_role") @db.SmallInt
-  /// Permissões que o usuário possui na plataforma
-  platformPermissions Json?    @map("platform_permissions") @db.JsonB
-  /// Campo usado para armazenar informações adicionais {chave:valor}
-  metadata            Json?    @db.JsonB
-
-  // Relations
-  company             Company? @relation(fields: [companyId], references: [id])
-  user                User?    @relation(fields: [userId], references: [id])
-
-  @@map("user_profile")
-}
-
-model User {
-  id           String   @id @default(uuid()) @db.Uuid
-  email        String?  @unique @db.VarChar(255)
-  /// 1: Admin, 2: Seguradora, 3: Corretor, 4: Segurado
-  primaryRole  Int?     @map("primary_role") @db.SmallInt
-  /// Roles locais na Cedente
-  profileId    Int?     @map("profile_id") @db.SmallInt
-  /// 0: Inactive, 1: Active
-  status       Int?     @db.SmallInt
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
-
-  // Relations
-  userProfiles UserProfile[]
-  policies     Policy[]      @relation("BrokerToPolicy")
-
-  @@map("user")
-}
-
-model Policy {
-  id                    String   @id @default(uuid()) @db.Uuid
-  brokerUserId          String   @map("broker_user_id") @db.Uuid
-  /// FK Lógica para o schema "Master SQL DB"
-  productIdRef          String?  @map("product_id_ref") @db.Uuid
-  /// ID da cotação escolhida
-  chosenQuoteId         String?  @map("chosen_quote_id") @db.Uuid
-  policyNumber          String?  @unique @map("policy_number") @db.VarChar(100)
-  companyName           String?  @map("company_name") @db.VarChar(255)
-  tradeName             String?  @map("trade_name") @db.VarChar(255)
-  /// Código CNAE
-  cnae                  String?  @db.VarChar(50)
-  /// CPF/CNPJ
-  federalDocument       String?  @map("federal_document") @db.VarChar(20)
-  primaryContactName    String?  @map("primary_contact_name") @db.VarChar(255)
-  primaryContactPositon String?  @map("primary_contact_positon") @db.VarChar(255)
-  primaryContactEmail   String?  @map("primary_contact_email") @db.VarChar(100)
-  primaryContactPhone   String?  @map("primary_contact_phone") @db.VarChar(20)
-  /// Lista de companhias do mesmo grupo ecônomico
-  groupCompanies        Json?    @map("group_companies") @db.JsonB
-  /// Ínicio da vigência
-  startDate             DateTime? @map("start_date") @db.Date
-  /// Fim da vigência
-  endDate               DateTime? @map("end_date") @db.Date
-  netPremium            Decimal? @map("net_premium") @db.Decimal(18, 2)
-  totalPremium          Decimal? @map("total_premium") @db.Decimal(18, 2)
-  /// Endereço completo
-  fullAddress           Json?    @map("full_address") @db.JsonB
-  /// 0: Draft, 1: Active, 2: Cancelled
-  status                Int?     @db.SmallInt
-  createdAt             DateTime @default(now()) @map("created_at")
-  updatedAt             DateTime @default(now()) @updatedAt @map("updated_at")
-
-  // Relations
-  broker       User          @relation("BrokerToPolicy", fields: [brokerUserId], references: [id])
-  quotes       Quote[]
-  claims       Claim[]
-  endorsements Endorsement[]
-  invoices     Invoice[]
-
-  @@map("policy")
-}
-
-model Quote {
-  id                     String   @id @default(uuid()) @db.Uuid
-  policyId               String?  @map("policy_id") @db.Uuid
-  /// 0: Draft, 1: Pending, 2: Calculated
-  status                 Int?     @db.SmallInt
-  /// Questionário - Step 2
-  payloadOperationRoutes Json?    @map("payload_operation_routes") @db.JsonB
-  /// Questionário - Step 3
-  payloadShipmentInfo    Json?    @map("payload_shipment_info") @db.JsonB
-  /// Questionário - Step 4
-  payloadRiskManagement  Json?    @map("payload_risk_management") @db.JsonB
-  /// Questionário - Step 5
-  payloadCoverages       Json?    @map("payload_coverages") @db.JsonB
-  /// Questionário - Step 6
-  payloadComplianceDocs  Json?    @map("payload_compliance_docs") @db.JsonB
-  totalPremium           Decimal? @map("total_premium") @db.Decimal(18, 2)
-  createdAt              DateTime @default(now()) @map("created_at")
-  updatedAt              DateTime @default(now()) @updatedAt @map("updated_at")
-
-  // Relations
-  policy    Policy?    @relation(fields: [policyId], references: [id])
-  proposals Proposal[]
-
-  @@map("quote")
-}
-
-model Proposal {
-  id                 String    @id @default(uuid()) @db.Uuid
-  quoteId            String?   @map("quote_id") @db.Uuid
-  /// ID de retorno da Seguradora via RabbitMQ
-  externalProposalId String?   @map("external_proposal_id") @db.VarChar(100)
-  /// 0: Pending, 1: Approved, 2: Rejected
-  status             Int?      @db.SmallInt
-  submittedAt        DateTime? @map("submitted_at") @db.Timestamp
-
-  // Relations
-  quote Quote? @relation(fields: [quoteId], references: [id])
-
-  @@map("proposal")
-}
-
-model Claim {
-  id            String   @id @default(uuid()) @db.Uuid
-  policyId      String?  @map("policy_id") @db.Uuid
-  claimNumber   String?  @map("claim_number") @db.VarChar(100)
-  status        Int?     @db.SmallInt
-  reserveAmount Decimal? @map("reserve_amount") @db.Decimal(18, 2)
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at")
-
-  // Relations
-  policy Policy? @relation(fields: [policyId], references: [id])
-
-  @@map("claim")
-}
-
-model Endorsement {
-  id                String   @id @default(uuid()) @db.Uuid
-  policyId          String?  @map("policy_id") @db.Uuid
-  endorsementNumber String?  @map("endorsement_number") @db.VarChar(100)
-  /// 1: Inclusão/Exclusão, 2: Alteração Limite, 3: Cancelamento
-  type              Int?     @db.SmallInt
-  /// 0: Pending, 1: Processed, 2: Rejected
-  status            Int?     @db.SmallInt
-  effectiveDate     DateTime? @map("effective_date") @db.Date
-  /// Valor a cobrar ou restituir
-  premiumDelta      Decimal? @map("premium_delta") @db.Decimal(18, 2)
-  /// Apenas os campos que foram alterados em relação à Quote original
-  changePayload     Json?    @map("change_payload") @db.JsonB
-  observations      String?  @db.Text
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at")
-
-  // Relations
-  policy Policy? @relation(fields: [policyId], references: [id])
-
-  @@map("endorsement")
-}
-
-model Invoice {
-  id                String   @id @default(uuid()) @db.Uuid
-  policyId          String?  @map("policy_id") @db.Uuid
-  dueDate           DateTime? @map("due_date") @db.Date
-  amount            Decimal? @db.Decimal(18, 2)
-  /// 0: Pending, 1: Paid, 2: Overdue, 3: Cancelled
-  status            Int?     @db.SmallInt
-  installmentNumber Int?     @map("installment_number") @db.SmallInt
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at")
-
-  // Relations
-  policy              Policy?              @relation(fields: [policyId], references: [id])
-  paymentTransactions PaymentTransaction[]
-
-  @@map("invoice")
-}
-
-model PaymentTransaction {
-  id               String    @id @default(uuid()) @db.Uuid
-  invoiceId        String?   @map("invoice_id") @db.Uuid
-  gatewayReference String?   @map("gateway_reference") @db.VarChar(255)
-  /// 1: CC, 2: Boleto, 3: Pix
-  paymentMethodId  Int?      @map("payment_method_id") @db.SmallInt
-  /// 0: Failed, 1: Success, 2: Processing
-  status           Int?      @db.SmallInt
-  paidAt           DateTime? @map("paid_at") @db.Timestamp
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at")
-
-  // Relations
-  invoice Invoice? @relation(fields: [invoiceId], references: [id])
-
-  @@map("payment_transaction")
 }
