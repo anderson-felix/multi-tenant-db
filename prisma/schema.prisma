@@ -8,87 +8,13 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model BackofficeUser {
+model User {
   id              String   @id @default(uuid()) @db.Uuid
-  fullName        String?  @db.VarChar(255)
-  email           String?  @unique @db.VarChar(255)
-  externalIdpId   String?  @unique @db.VarChar(255) // ObjectId do Azure AD
-  role            Int?     @db.SmallInt // 1: SuperAdmin, 2: Finance
-  status          Int?     @db.SmallInt // 0: Inactive, 1: Active
+  fullName        String   @db.VarChar(255)
+  email           String   @unique @db.VarChar(255)
+  password        String   @unique @db.VarChar(50) 
+  role            Int      @db.SmallInt // 1: SuperAdmin, 2: Common
+  status          Int      @db.SmallInt // 0: Inactive, 1: Active
   createdAt       DateTime @default(now())
   updatedAt       DateTime @default(now()) @updatedAt
-}
-
-model InsurerTenant {
-  id              String   @id @default(uuid()) @db.Uuid
-  name            String?  @db.VarChar(255)
-  tradeName       String?  @db.VarChar(255)
-  federalDocument String?  @db.VarChar(20)
-  dbRef           String?  @unique @db.VarChar(50) // Nome da base de dados da cedente
-  status          Int?     @db.SmallInt // 0: Inactive, 1: Active
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @default(now()) @updatedAt
-  
-  products        Product[]
-  tenantProducts  InsurerTenantProduct[]
-}
-
-model Product {
-  id              String   @id @default(uuid()) @db.Uuid
-  insurerTenantId String   @db.Uuid
-  name            String   @db.VarChar(255)
-  productTypeId   Int?     @db.SmallInt // 1: RCTR-C, 2: RC-DC, 3: Multimodal
-  pricingRuleId   String?  @db.Uuid
-  status          Int?     @db.SmallInt // 0: Inactive, 1: Active
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @default(now()) @updatedAt
-
-  // Relations
-  insurerTenant   InsurerTenant @relation(fields: [insurerTenantId], references: [id])
-  pricingRule     PricingRule?  @relation(fields: [pricingRuleId], references: [id])
-  tenantProducts  InsurerTenantProduct[]
-  productCoverages ProductCoverage[]
-}
-
-model InsurerTenantProduct {
-  id              String   @id @default(uuid()) @db.Uuid
-  insurerTenantId String   @db.Uuid
-  productId       String?  @db.Uuid
-  metadata        Json?    @db.JsonB // Informações adicionais {chave:valor}
-
-  // Relations
-  insurerTenant   InsurerTenant @relation(fields: [insurerTenantId], references: [id])
-  product         Product?      @relation(fields: [productId], references: [id])
-}
-
-model Coverage {
-  id              String   @id @default(uuid()) @db.Uuid
-  code            String?  @db.VarChar(20) // Ex: AP 01, RCF-DC
-  name            String   @db.VarChar(255)
-  description     String?  @db.Text
-  baseTax         Decimal? @db.Decimal(10, 6)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @default(now()) @updatedAt
-
-  productCoverages ProductCoverage[]
-}
-
-model ProductCoverage {
-  id              String   @id @default(uuid()) @db.Uuid
-  productId       String?  @db.Uuid
-  coverageId      String?  @db.Uuid
-  metadata        Json?    @db.JsonB // Informações adicionais {chave:valor}
-
-  // Relations
-  product         Product?  @relation(fields: [productId], references: [id])
-  coverage        Coverage? @relation(fields: [coverageId], references: [id])
-}
-
-model PricingRule {
-  id              String   @id @default(uuid()) @db.Uuid
-  ruleJson        Json?    @db.JsonB // Regras de motor de cálculo
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @default(now()) @updatedAt
-
-  products        Product[]
 }

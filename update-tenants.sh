@@ -1,41 +1,71 @@
 #!/bin/bash
 
-MASTER_DB_URL="postgresql://postgres:postgres@localhost:7000/master1"
-DB_BASE_URL="postgresql://postgres:postgres@localhost:7000"
+# Localiza o arquivo .env no mesmo diretório do script
+ENV_FILE="$(dirname "$0")/.env"
 
-echo "🚀 Iniciando processo de atualização multi-tenant..."
-
-# 1. Busca os nomes dos bancos na tabela 'tenants' (coluna 'dbref')
-tenants=$(psql $MASTER_DB_URL -t -c "SELECT dbref FROM tenants;")
-
-if [ -z "$tenants" ]; then
-    echo "❌ Nenhum tenant encontrado ou erro na conexão com master1."
+if [ -f "$ENV_FILE" ]; then
+    echo "📂 Carregando variáveis do arquivo .env..."
+    # Exporta as variáveis ignorando comentários
+    export $(grep -v '^#' "$ENV_FILE" | xargs)
+else
+    echo "❌ Erro: Arquivo .env não encontrado em $(dirname "$0")"
     exit 1
 fi
 
-echo "Bancos de dados encontrados:"
-echo "$tenants"
+if [ -z "$MASTER_DB_URL" ] || [ -z "$DB_BASE_URL" ] || [ -z "$TENANT_TABLE_NAME" ] || [ -z "$TENANT_COLUMN_NAME" ]; then
+    echo "❌ Erro: MASTER_DB_URL, DB_BASE_URL, TENANT_TABLE_NAME ou TENANT_COLUMN_NAME não definidas no .env"
+    exit 1
+fi
 
-# 2. Itera sobre cada banco de dados
+echo "🚀 Iniciando processo de atualização"
+
+tenants=$(psql "$MASTER_DB_URL" -t -c "SELECT \"$TENANT_COLUMN_NAME\" FROM \"$TENANT_TABLE_NAME\";")
+
+if [ -z "$tenants" ]; then
+    echo "❌ Nenhum tenant encontrado."
+    exit 1
+fi
+
+echo "----------------------------------------------------"
+echo "Bancos de dados encontrados para atualização:"
+echo "----------------------------------------------------"
+echo "$tenants"
+echo "----------------------------------------------------"
+
+echo "Deseja aplicar as migrações (deploy) nestes bancos?"
+echo " [1] Sim, iniciar agora"
+echo " [0] Não, cancelar processo"
+echo -n "Opção: "
+read opcao
+
+if [ "$opcao" != "1" ]; then
+    echo "🚫 Operação cancelada pelo usuário."
+    exit 0
+fi
+
+echo "🚀 Iniciando migrações em massa..."
+
+# Itera sobre cada banco de dados
 for dbname in $tenants; do
-    # Remove espaços em branco extras (trim)
-    dbname=$(echo $dbname | xargs)
+    dbname=$(echo $dbname | xargs) # Trim
     
     echo "----------------------------------------------------"
     echo "🛠️  Atualizando banco: $dbname"
     
-    # Define a variável de ambiente DATABASE_URL temporariamente para o Prisma
+    # Sobrescreve a URL de conexão para o tenant atual
     export DATABASE_URL="$DB_BASE_URL/$dbname"
     
-    echo "👉 Aplicando migrações..."
+    echo "👉 Aplicando migrações (deploy)..."
     npx prisma migrate dev --schema=./prisma/schema.prisma --name auto
     
     if [ $? -eq 0 ]; then
         echo "✅ Banco $dbname atualizado com sucesso!"
     else
-        echo "⚠️ Erro ao atualizar $dbname. Verifique os logs."
+        echo "⚠️  FALHA ao atualizar $dbname. Verifique os logs imediatamente."
+        # Interromper o script em caso de erro:
+        exit 1 
     fi
 done
 
 echo "----------------------------------------------------"
-echo "🏁 Processo finalizado!"
+echo "🏁 Processo de atualização finalizado!"
